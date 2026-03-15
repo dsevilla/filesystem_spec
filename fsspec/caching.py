@@ -214,7 +214,7 @@ class MMapCache(BaseCache):
         if self.multi_fetcher:
             logger.debug(f"MMap get blocks {ranges}")
             for idx, r in enumerate(self.multi_fetcher(ranges)):
-                (sstart, send) = ranges[idx]
+                sstart, send = ranges[idx]
                 logger.debug(f"MMap copy block ({sstart}-{send}")
                 self.cache[sstart:send] = r
         else:
@@ -391,19 +391,8 @@ class BlockCache(BaseCache):
         if start >= self.size or start >= end:
             return b""
 
-        # byte position -> block numbers
-        start_block_number = start // self.blocksize
-        end_block_number = end // self.blocksize
-
-        # these are cached, so safe to do multiple calls for the same start and end.
-        for block_number in range(start_block_number, end_block_number + 1):
-            self._fetch_block_cached(block_number)
-
         return self._read_cache(
-            start,
-            end,
-            start_block_number=start_block_number,
-            end_block_number=end_block_number,
+            start, end, start // self.blocksize, (end - 1) // self.blocksize
         )
 
     def _fetch_block(self, block_number: int) -> bytes:
@@ -439,6 +428,8 @@ class BlockCache(BaseCache):
         """
         start_pos = start % self.blocksize
         end_pos = end % self.blocksize
+        if end_pos == 0:
+            end_pos = self.blocksize
 
         self.hit_count += 1
         if start_block_number == end_block_number:
@@ -668,7 +659,6 @@ class KnownPartsOfAFile(BaseCache):
         if stop is None:
             stop = self.size
         self.total_requested_bytes += stop - start
-
         out = b""
         started = False
         loc_old = 0
@@ -699,11 +689,13 @@ class KnownPartsOfAFile(BaseCache):
             elif loc0 <= stop <= loc1:
                 # end block
                 self.hit_count += 1
-                return out + self.data[(loc0, loc1)][: stop - loc0]
+                out = out + self.data[(loc0, loc1)][: stop - loc0]
+                return out
             loc_old = loc1
         self.miss_count += 1
         if started and not self.strict:
-            return out + b"\x00" * (stop - loc_old)
+            out = out + b"\x00" * (stop - loc_old)
+            return out
         raise ValueError
 
 
