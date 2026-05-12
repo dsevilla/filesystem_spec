@@ -1376,6 +1376,15 @@ def test_glob_posix_rules(path, expected, glob_fs):
     for name, info in _clean_paths(detailed_output).items():
         assert info == glob_fs[name]
 
+    withdirs_output = glob_fs.glob(path=f"mock://{path}", detail=True, withdirs=False)
+    path_output = _clean_paths(withdirs_output)
+    for name, info in path_output.items():
+        # withdirs only respected when path has magic
+        # otherwise glob returns the path regardless of the type of the path
+        if glob.has_magic(path):
+            assert info["type"] == "file"
+        assert info == glob_fs[name]
+
 
 @pytest.fixture(scope="function")
 def tmpfs(tmpdir):
@@ -1413,3 +1422,37 @@ def test_copy_wildcard_path_passthrough_kwargs_to_ls(tmpfs, tmpdir):
 def test_expand_path_wildcard_path_passthrough_kwargs_to_ls(tmpfs, tmpdir):
     expanded_paths = tmpfs.expand_path(tmpdir / "*", limit=2)
     assert len(expanded_paths) == 2
+
+
+def test_expand_path_special_characters():
+    fs_contents = (
+        {"name": "bucket", "type": "directory"},
+        {"name": "bucket/file[1].txt", "type": "file", "size": 100},
+        {"name": "bucket/file?.txt", "type": "file", "size": 100},
+        {"name": "bucket/normal.txt", "type": "file", "size": 100},
+    )
+    fs = DummyTestFS(fs_content=fs_contents)
+    paths = fs.expand_path("bucket", recursive=True)
+    expected = [
+        "bucket",
+        "bucket/file[1].txt",
+        "bucket/file?.txt",
+        "bucket/normal.txt",
+    ]
+    assert sorted(paths) == sorted(expected)
+
+
+def test_expand_path_with_magic_input():
+    fs_contents = (
+        {"name": "bucket", "type": "directory"},
+        {"name": "bucket/file[1].txt", "type": "file", "size": 100},
+        {"name": "bucket/file?.txt", "type": "file", "size": 100},
+        {"name": "bucket/normal.txt", "type": "file", "size": 100},
+    )
+    fs = DummyTestFS(fs_content=fs_contents)
+    paths = fs.expand_path("bucket/file*.txt", recursive=True)
+    expected = [
+        "bucket/file[1].txt",
+        "bucket/file?.txt",
+    ]
+    assert sorted(paths) == sorted(expected)

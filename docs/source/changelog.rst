@@ -1,6 +1,33 @@
 Changelog
 =========
 
+2026.4.0
+--------
+
+Fixes
+
+- proper install in ci to grab versions (#2025)
+- encode URLs in HTTP pipe_file (#2023)
+- implement delete and write_test for dirFS (#2022)
+- allow multiple local protocols (#2014)
+- context closing for tar and zip (#2012)
+- fix cat_file and cat_ranges for WholeFileCache (#2010)
+
+Other
+
+- usage warning to HTTP FS (#2024)
+- update adl: message following retirement (#2019)
+
+
+2026.3.0
+--------
+
+Fixes
+
+- non-string types in individual cond kwarg value env-vars (#2004)
+- allow withdirs in glob (#1998)
+- multi-file put in sftp (#1991)
+
 2026.2.0
 --------
 
